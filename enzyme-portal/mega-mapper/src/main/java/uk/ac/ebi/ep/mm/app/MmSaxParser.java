@@ -59,15 +59,24 @@ public abstract class MmSaxParser extends DefaultHandler implements MmParser {
                 con.setAutoCommit(false);
                 mm = new MegaJdbcMapper(con);
             }
+            mm.openMap();
+            LOGGER.info("Mega-map open to import entries/xrefs");
             parser.setWriter(mm);
             parser.parse(cl.getOptionValue("file"));
             mm.commit();
+            LOGGER.info("Data commited");
         } catch (Exception e){
             if (mm != null) mm.rollback();
             LOGGER.error("Unable to parse", e);
         } finally {
-            if (mm != null) mm.closeMap();
-            if (con != null) con.close();
+            if (mm != null){
+                mm.closeMap();
+                LOGGER.info("Mega-map closed");
+            }
+            if (con != null){
+                con.close();
+                LOGGER.info("Connection closed");
+            }
         }
     }
 
@@ -96,9 +105,7 @@ public abstract class MmSaxParser extends DefaultHandler implements MmParser {
             // Don't go ahead:
             throw new NullPointerException("A MegaMapper must be configured");
         }
-        LOGGER.info("Mega-map open to import entries/xrefs");
         try {
-            mm.openMap();
             XMLReader xr = XMLReaderFactory.createXMLReader();
             xr.setContentHandler(this);
             xr.setErrorHandler(this);
@@ -106,8 +113,6 @@ public abstract class MmSaxParser extends DefaultHandler implements MmParser {
             LOGGER.info("Parsing start");
             xr.parse(source);
             LOGGER.info("Parsing end");
-            mm.closeMap();
-            LOGGER.info("Map closed");
         } catch (IOException e){
             LOGGER.error("During parsing", e);
             mm.handleError();
